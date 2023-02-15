@@ -26,7 +26,7 @@ df_time_M101.drop_duplicates(subset=["stop_id"], keep="first", inplace=True)
 df_time_M101.head()
 # this code converts time difference into hours (want speed in mph)
 df_time_M101["timetravelledinhours"] = pd.to_timedelta(df_time_M101["arrival_time"]).dt.total_seconds()/3600
-df_time_M101["timedifference"] = df_time_M101["timetravelledinhours"].diff()
+df_time_M101["timedifference"] = df_time_M101["timetravelledinhours"].diff().abs()
 # look at where there are negative times in the dataset and why that is the case
 df_time_M101 = df_time_M101.drop(["timetravelledinhours"], axis=1)
 df_time_M101.to_csv(r'C:\Users\minah\OneDrive\Desktop\Independent Study\Time Difference\M101_timedifference.csv', index=False)
