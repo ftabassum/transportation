@@ -13,7 +13,13 @@ from math import cos, sin, asin, sqrt, radians
 from datetime import timedelta
 
 
-#%% this code loads GTFS MTA Manhattan bus stop times and divides them according to the bus line
+#%% this code loads the GTFS MTA Manhattan trips and shape files. Merging them preserve the sequence of trips
+df_trips = pd.read_csv('trips.txt')
+df_shapes = pd.read_csv('shapes.txt')
+# merging the two files, the first df takes precedence
+df_ts = df_trips.merge(df_shapes, on = "shape_id")
+
+#%%this code loads GTFS MTA Manhattan bus stop times and divides them according to the bus line
 df_time = pd.read_csv(r'C:\Users\minah\OneDrive\Desktop\Independent Study\stop_times.txt', sep=',' , header=1, names = ["trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence", "pickup_type", "drop_off_type", "timepoint"])
 #adding a new column 'Bus_Line' to only include the bus line name
 df_time['Bus_Line'] = df_time["trip_id"].str.split("_").map(lambda x: x[2])
