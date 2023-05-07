@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Created on Sat Feb  4 20:51:38 2023
@@ -13,34 +14,35 @@ from math import cos, sin, asin, sqrt, radians
 from datetime import timedelta
 
 
-#%% this code loads the GTFS MTA Manhattan trips and shape files. Merging them preserve the sequence of trips
-df_trips = pd.read_csv('trips.txt')
-df_shapes = pd.read_csv('shapes.txt')
-# merging the two files, the first df takes precedence
-df_ts = df_trips.merge(df_shapes, on = "shape_id")
-
-#%%this code loads GTFS MTA Manhattan bus stop times and divides them according to the bus line
-#df_time = pd.read_csv(r'C:\Users\minah\OneDrive\Desktop\Independent Study\stop_times.txt', sep=',' , header=1, names = ["trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence", "pickup_type", "drop_off_type", "timepoint"])
-df_time = pd.read_csv('stop_times.txt', sep=',' , header=1, names = ["trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence", "pickup_type", "drop_off_type", "timepoint"])
-
-
-#adding a new column 'Bus_Line' to only include the bus line name
-df_time['Bus_Line'] = df_time["trip_id"].str.split("_").map(lambda x: x[2])
-
-#masking a dataframe
-df_time_M101 = df_time[["arrival_time", "stop_id", "Bus_Line"]].loc[df_time['Bus_Line']=="M101"]
-df_time_M101.drop_duplicates(subset=["stop_id"], keep="first", inplace=True)
-df_time_M101.head()
-
-# there are a lot of suplicate values in the set, why?
-df_time_M101.drop_duplicates(subset=["stop_id"], keep="first", inplace=True)
-df_time_M101.head()
-
-# this code converts time difference into hours (want speed in mph)
-df_time_M101["timetravelledinhours"] = pd.to_timedelta(df_time_M101["arrival_time"]).dt.total_seconds()/3600
-df_time_M101["timedifference"] = df_time_M101["timetravelledinhours"].diff().abs()
-
-# look at where there are negative times in the dataset and why that is the case
-df_time_M101 = df_time_M101.drop(["timetravelledinhours"], axis=1)
-#df_time_M101.to_csv(r'C:\Users\minah\OneDrive\Desktop\Independent Study\Time Difference\M101_timedifference.csv', index=False)
-df_time_M101.to_csv('M101_timedifference.csv', index=False)
+def time(line, trip_id_0, trip_id_1, trips, stop_times):
+    
+    #%% this code loads the GTFS MTA Manhattan trips and trips files. Merging them preserve the sequence of trips
+    df_trips = pd.read_csv(trips)
+    df_time = pd.read_csv(stop_times)
+    # merging the two files, the first df takes precedence
+    df_ts = df_trips.merge(df_time, on = "trip_id")
+    
+    #%% This is a generalized code that can be applied to any bus line. Comments are made where specific inputs are required
+    # This code masks a dataframe, meaning it reduces the size of the dataframe to contain only the defined value(s) in the defined column(s)
+    df_ts_bl = df_ts[["route_id", "trip_id", "shape_id","trip_headsign", "arrival_time", "stop_id", "stop_sequence", "direction_id"]].loc[df_ts["route_id"]==line] #choose a specific bus line for the route_id
+    
+    #%%                 
+    # This code chooses arbitrary trip_ids to isolate a route running in both directions, defined by a 0 for northbound or eastbound and 1 for southbound or westbound routes. 
+    df_ts_bl_01 = df_ts_bl.loc[(df_ts_bl["trip_id"]==trip_id_0) | (df_ts_bl["trip_id"] ==trip_id_1)]
+    df_ts_bl_0 = df_ts_bl_01.loc[df_ts_bl_01["direction_id"] == 0]
+    df_ts_bl_1 = df_ts_bl_01.loc[df_ts_bl_01["direction_id"] == 1]
+    
+    #%%% Add time difference column to northbound/eastbound and southbound/westbound direction dataframes
+    
+    df_ts_bl_0["timetravelledinhours"] = pd.to_timedelta(df_ts_bl_0["arrival_time"]).dt.total_seconds()/3600 # converting arrival time into seconds and then hours
+    df_ts_bl_0["timedifference"] = df_ts_bl_0["timetravelledinhours"].diff().abs() # takes the difference between index i and i-1, and places it in index i
+    df_ts_bl_0 = df_ts_bl_0.drop(["timetravelledinhours"], axis = 1)
+    df_ts_bl_1["timetravelledinhours"] = pd.to_timedelta(df_ts_bl_1["arrival_time"]).dt.total_seconds()/3600
+    df_ts_bl_1["timedifference"] = df_ts_bl_1["timetravelledinhours"].diff().abs()
+    df_ts_bl_1 = df_ts_bl_1.drop(["timetravelledinhours"], axis = 1)
+    
+    return df_ts_bl_0, df_ts_bl_1 
+    #%%% Save each dataframe as a csv file, according to the particular bus line name
+    
+    #df_ts_bl_0.to_csv(line + '_distance_northbound.csv', index=False) 
+    #df_ts_bl_1.to_csv(line + '_distance_southbound.csv', index=False)
